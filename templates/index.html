@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NameRank</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { max-width: 800px; margin: 20px auto; padding: 10px; background: #f8f9fa; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #1a1a1a; margin-bottom: 10px; font-size: 36px; font-weight: 700; }
+        .tagline { text-align: center; color: #444; margin-bottom: 30px; font-size: 17px; }
+        .input-group { display: flex; margin-bottom: 25px; }
+        #domain-input { 
+            flex: 1; padding: 15px; font-size: 18px; border: 2px solid #007AFF; 
+            border-radius: 10px 0 0 10px; outline: none; background: #fff;
+        }
+        #rate-btn { 
+            background: #007AFF; color: white; border: none; padding: 0 25px; 
+            font-size: 18px; border-radius: 0 10px 10px 0; cursor: pointer; 
+            transition: background 0.3s;
+        }
+        #rate-btn:hover { background: #0056b3; }
+        .result { margin-top: 30px; text-align: center; }
+        .rating { 
+            font-size: 84px; font-weight: bold; color: #007AFF; 
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .value-estimate {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            box-shadow: 0 4px 10px rgba(30, 60, 114, 0.2);
+        }
+        .value-amount {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .value-disclaimer {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-top: 15px;
+        }
+        .breakdown { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+            gap: 12px; margin-top: 25px;
+        }
+        .metric { 
+            background: #f1f3f5; padding: 14px; border-radius: 8px; 
+            border-left: 3px solid #007AFF;
+        }
+        .metric-name { font-size: 14px; font-weight: 600; color: #333; }
+        .metric-value { font-size: 22px; font-weight: bold; color: #007AFF; }
+        .error { color: #d73a49; margin-top: 15px; font-weight: 500; }
+        footer { 
+            text-align: center; margin-top: 40px; color: #666; font-size: 0.9em; 
+            line-height: 1.5; padding-bottom: 10px;
+        }
+        footer strong { color: #000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NameRank</h1>
+        <p class="tagline">How valuable is your domain? Get an instant AI-powered score and value estimate.</p>
+        
+        <div class="input-group">
+            <input type="text" id="domain-input" placeholder="yourbrand" autofocus>
+            <button id="rate-btn">Rank It</button>
+        </div>
+        
+        <div id="result" class="result">
+            <!-- Results appear here -->
+        </div>
+
+        <!-- AI Name Generator Button -->
+        <div style="margin: 30px 0; text-align: center;">
+          <button 
+            id="generate-btn" 
+            style="
+              padding: 14px 28px; 
+              background: #2c3e50; 
+              color: white; 
+              border: none; 
+              border-radius: 8px; 
+              font-size: 16px; 
+              font-weight: 600; 
+              cursor: pointer;
+              box-shadow: 0 4px 10px rgba(44, 62, 80, 0.2);
+              transition: all 0.3s;
+            "
+            onmouseover="this.style.background='#1a252f'"
+            onmouseout="this.style.background='#2c3e50'"
+          >
+            🔮 Generate AI Brand Names
+          </button>
+        </div>
+
+        <!-- Generated Results -->
+        <div id="generated-results" style="display: none; margin-top: 30px; padding: 25px; background: #f1f3f5; border-radius: 12px;">
+          <h3 style="color: #1a1a1a; margin-bottom: 15px; text-align: center;">🚀 Creative Brand Names</h3>
+          <div id="generated-list" style="display: grid; gap: 10px;"></div>
+        </div>
+        
+        <footer>
+            <strong>NameRank</strong> — Where ideas meet domains.<br>
+            Smart suggestions • Real availability • Domain value estimates
+        </footer>
+    </div>
+
+    <template id="suggestions-template">
+      <div class="suggestions" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+        <h3 style="color: #1a1a1a; margin-bottom: 15px;">💡 Smart Suggestions</h3>
+        <div class="suggestions-list" style="display: grid; gap: 10px;">
+          <!-- Suggestions go here -->
+        </div>
+      </div>
+    </template>
+
+    <style>
+      .suggestion-item {
+        display: flex; justify-content: space-between; padding: 10px; 
+        background: white; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;
+      }
+      .suggestion-domain { font-weight: 600; }
+      .suggestion-status { 
+        padding: 2px 8px; border-radius: 12px; font-size: 0.85em; 
+      }
+      .available { background: #d4edda; color: #155724; }
+      .taken { background: #f8d7da; color: #721c24; }
+      
+      .sales-item {
+        padding: 8px 0; border-top: 1px dashed #eee;
+        display: flex; justify-content: space-between;
+      }
+      .sales-domain { font-weight: 600; }
+      .sales-price { color: #007AFF; font-weight: bold; }
+    </style>
+
+    <script>
+        document.getElementById('rate-btn').addEventListener('click', rateDomain);
+        document.getElementById('domain-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter') rateDomain();
+        });
+
+        function rateDomain() {
+            const domain = document.getElementById('domain-input').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!domain) {
+                resultDiv.innerHTML = '<p class="error">Please enter a keyword or domain</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p>Analyzing...</p>';
+            
+            const isFullDomain = domain.includes('.');
+            const domainToSend = isFullDomain ? domain : (domain + '.com');
+
+            fetch('/rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain: domainToSend })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    resultDiv.innerHTML = `<p class="error">${data.error}</p>`;
+                    return;
+                }
+                
+                let breakdown = '<div class="breakdown">';
+                Object.entries(data.breakdown).forEach(([key, value]) => {
+                    breakdown += `
+                        <div class="metric">
+                            <div class="metric-name">${key}</div>
+                            <div class="metric-value">${value}</div>
+                        </div>
+                    `;
+                });
+                breakdown += '</div>';
+                
+                let valueSection = `
+                    <div class="value-estimate">
+                        <div>Estimated Flip Value</div>
+                        <div class="value-amount">${data.value.formatted}</div>
+                        <div style="font-size: 14px; opacity: 0.9;">Based on recent market data</div>
+                        
+                        ${data.value.recent_sales.length > 0 ? `
+                        <div style="margin-top: 15px; font-weight: 600; text-align: left;">
+                            📈 Recent similar sales:
+                        </div>
+                        <div style="display: grid; gap: 5px; margin-top: 8px; text-align: left;">
+                            ${data.value.recent_sales.map(sale => `
+                                <div class="sales-item">
+                                    <span class="sales-domain">${sale.domain}</span>
+                                    <span class="sales-price">$${sale.price.toLocaleString()}</span>
+                                </div>
+                            `).join('')}
+                        </div>` : ''}
+                        
+                        <div class="value-disclaimer">
+                            * Estimates based on NameRank's proprietary algorithm. Not financial advice.
+                        </div>
+                    </div>
+                `;
+                
+                resultDiv.innerHTML = `
+                    <div class="rating">${data.rating}</div>
+                    <p><strong>${data.details.domain}</strong></p>
+                    ${valueSection}
+                    ${breakdown}
+                `;
+
+                const baseWord = domain.toLowerCase().replace(/[^a-z]/g, '');
+                if (baseWord.length >= 3) {
+                    setTimeout(() => showSuggestions(baseWord), 600);
+                }
+            })
+            .catch(err => {
+                resultDiv.innerHTML = `<p class="error">Error: ${err.message}</p>`;
+                console.error("Rating error:", err);
+            });
+        }
+
+        function showSuggestions(base) {
+            fetch('/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ base: base })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.suggestions || data.suggestions.length === 0) return;
+                
+                const template = document.getElementById('suggestions-template');
+                const clone = template.content.cloneNode(true);
+                const list = clone.querySelector('.suggestions-list');
+                
+                data.suggestions.forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-item';
+                    item.innerHTML = `
+                        <span class="suggestion-domain">${s.domain}</span>
+                        <span class="suggestion-status ${s.available ? 'available' : 'taken'}">
+                            ${s.available ? 'Available' : 'Taken'}
+                        </span>
+                    `;
+                    list.appendChild(item);
+                });
+                
+                document.getElementById('result').appendChild(clone);
+            })
+            .catch(console.error);
+        }
+
+        // AI Name Generator
+        document.getElementById('generate-btn').addEventListener('click', fetchGeneratedNames);
+
+        function fetchGeneratedNames() {
+            const resultsDiv = document.getElementById('generated-results');
+            const listDiv = document.getElementById('generated-list');
+            
+            resultsDiv.style.display = 'block';
+            listDiv.innerHTML = 'Generating creative names...';
+
+            fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count: 8 })
+            })
+            .then(r => r.json())
+            .then(data => {
+                listDiv.innerHTML = '';
+                data.names.forEach(item => {
+                    const el = document.createElement('div');
+                    el.style = 'display: flex; justify-content: space-between; padding: 12px; background: white; border: 1px solid #ddd; border-radius: 6px; font-family: monospace;';
+                    el.innerHTML = `
+                        <div>
+                            <strong>${item.name}</strong> → <small>${item.domain}</small>
+                        </div>
+                        <span class="suggestion-status ${item.available ? 'available' : 'taken'}">
+                            ${item.available ? 'Available' : 'Taken'}
+                        </span>
+                    `;
+                    listDiv.appendChild(el);
+                });
+            })
+            .catch(err => {
+                listDiv.innerHTML = `<p class="error">Error: ${err.message}</p>`;
+                console.error("Generate error:", err);
+            });
+        }
+    </script>
+</body>
+</html>
